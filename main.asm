@@ -2,16 +2,16 @@
     buffer_frame: .space 0x8000
     prompt: .string "start value>"
 
-	.include "bits/0_bits.asm"
-	.include "bits/1_bits.asm"
-	.include "bits/2_bits.asm"
-	.include "bits/3_bits.asm"
-	.include "bits/4_bits.asm"
-	.include "bits/5_bits.asm"
-	.include "bits/6_bits.asm"
-	.include "bits/7_bits.asm"
-	.include "bits/8_bits.asm"
-	.include "bits/9_bits.asm"
+    .include "bits/0_bits.asm"
+    .include "bits/1_bits.asm"
+    .include "bits/2_bits.asm"
+    .include "bits/3_bits.asm"
+    .include "bits/4_bits.asm"
+    .include "bits/5_bits.asm"
+    .include "bits/6_bits.asm"
+    .include "bits/7_bits.asm"
+    .include "bits/8_bits.asm"
+    .include "bits/9_bits.asm"
 
     width: .word 32
     height: .word 64
@@ -19,18 +19,18 @@
     canvas_height: .word 64
     canvas_width: .word 128
 
-# a1, a2, a3, a4, a5
+# a1, a2, a3, a4, a5, (t3, t4)
 .macro draw_num(%num, %position)
 
-	la  a1, buffer_frame
+    la  a1, buffer_frame
 
-	mv  a2, %num
-	lw  a3, (a2)
+    mv  a2, %num
+    lw  a3, (a2)
 
     lw  a4, width
     lw  a5, height
 
-    # width * position * word_size
+    # buffer_frame += width * position * word_size
     lw t3, width
     li t4, %position
     mul t3, t3, t4
@@ -42,15 +42,20 @@ draw_line:
 	sw   	a3, 0(a1)   # store the content of a3 (color) in the address pointed by a1
 
     # advance to next frame buffer pixel position and _number reference
-	addi 	a1, a1, 4
-	addi 	a2, a2, 4
-	lw      a3, (a2)
+    addi 	a1, a1, 4
+    addi 	a2, a2, 4
+    lw      a3, (a2)
 
 	addi 	a4, a4, -1
     bnez    a4, draw_line
 
-
-    addi    a1, a1, 384 # 128-32)*4
+    # buffer_frame += (canvas_width - width) * word_size
+    lw t3, width
+    lw t4, canvas_width
+    sub t3, t4, t3
+    li t4, 4
+    mul t3, t3, t4
+    add a1, a1, t3
 
     addi    a4, a4, 32  # replenish width
     addi    a5, a5, -1  # decrease height counter
@@ -135,11 +140,5 @@ read_char:
     ecall
     ret
 
-print_num:
-    li a7, 11
-    addi a0, a0, '0'
-    ecall
-    ret
-    
 # render
 .include "render.asm"
